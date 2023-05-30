@@ -1,0 +1,199 @@
+// this class represents a Repository of Commits which tracks changes & 
+// supports operations such as, creating a new Repository, creating & adding
+// new commits, viewing commit history, removing commits, manipulating 
+// the order of commits, & checking if a certain commit exists
+
+import java.util.*;
+
+public class Repository {
+    private String name;
+    private Commit head;
+    
+    // constructs an empty repository given a name
+    // if the given name is empty or null, then an IllegalArgumentException is thrown
+    // parameters:
+    //      String name: name of this Repository
+    public Repository(String name) {
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException();
+        }
+        this.name = name;
+    }
+
+    // retrives the ID of the current head commit or null if no commits exist in this Repository
+    // returns:
+    //      String: ID of current head commit, or null if no there are no commits
+    public String getRepoHead() {
+        if (head == null) {
+            return null;
+        }
+        return head.id;
+    }
+
+    // returns a string representation of this Repository which includes
+    // the name and ID of current head commit, as well as prior commits 
+    // returns:
+    //      String: representation of this Repository of commits, including 
+    //              the name and ID of current head commit & prior 
+    public String toString() {
+        if (head == null) {
+            return name + " - No commits";
+        }
+        return name + " - Current head: " + head;
+    }
+
+    // determines if this Repository contains a certain commit given an ID
+    // parameters:
+    //      String targetId: ID of commit to search for
+    // returns:
+    //      boolean: true if this Repository contains given commit, false otherwise
+    public boolean contains(String targetId) {
+        Commit curr = head;
+        while (curr != null) {
+            if (curr.id.equals(targetId)) {
+                return true;
+            }
+            curr = curr.past;
+        }
+        return false;
+    }
+
+    // returns a string representing the (n) most recent commits in this Repository
+    // if (n) is less than or equal to 0, then an IllegalArgumentException is thrown
+    // parameters:
+    //      int n: number of commits to include in the history
+    // returns: 
+    //      String: representation of (n) most recent commits in this Repository
+    public String getHistory(int n) {
+        if (n <= 0) {
+            throw new IllegalArgumentException();
+        }
+        String history = "";
+        Commit curr = head;
+        if (curr != null) {
+            history += curr.toString();
+            curr = curr.past;
+        }
+        int index = 1;
+        while (curr != null && index < n) {
+            history += "\n" + curr.toString();
+            curr = curr.past;
+            index++;
+        }
+        return history;
+    }
+
+    // creates & adds a new commit as the head to this Repository with the given message
+    // parameters:
+    //      String message: message describing changes made in the commit
+    // returns:
+    //      String: ID of newly created commit
+    public String commit(String message) {
+        Commit newCommit = new Commit(message, head);
+        head = newCommit;
+        return newCommit.id;
+    }
+
+    // sets the head of this Repository to the given (n) commit prior to the current head
+    // if (n) is less than or equal to 0, then an IllegalArgumentException is thrown
+    //  parameters:
+    //      int n: number of commits to reset/move back to
+    public void reset(int n) {
+        if (n <= 0) {
+            throw new IllegalArgumentException();
+        }
+        Commit curr = head;
+        int index = 0;
+        while (curr != null && index < n) {
+            curr = curr.past;
+            index++;
+        }
+        head = curr;
+    }
+
+    // removes a commit from this Repository given an ID
+    // if no commits exist in this Repository, false is returned
+    // parameters:
+    //      String targetId: ID of commit to remove 
+    // returns:
+    //      boolean: true if given commit was removed, false otherwise
+    public boolean drop(String targetId) {
+        if (head == null) {
+            return false;
+        }
+        if (head.id.equals(targetId)) {
+            head = head.past;
+            return true;
+        }
+        Commit curr = head;
+        while (curr.past != null) {
+            if (curr.past.id.equals(targetId)) {
+                curr.past = curr.past.past;
+                return true;
+            }
+            curr = curr.past;
+        }
+        return false;
+    }
+
+    // creates a new commit by combining the given commit with the prior commit
+    // & sets it as the head. if no commits exist, false is returned
+    // parameters:
+    //      String targetId: ID of commit to squash 
+    // returns:
+    //      boolean: true if given commit was squahsed, false otherwise
+    public boolean squash(String targetId) {
+        if (head == null || head.past == null) {
+            return false;
+        }
+        if (head.id.equals(targetId)) {
+            Commit newCommit = new Commit("SQUASHED: " + head.message + "/" + head.past.message, head.past.past);
+            head = newCommit;
+            return true;
+        }
+        Commit curr = head;
+        while (curr.past != null && curr.past.past != null) {
+            if (curr.past.id.equals(targetId)) {
+                Commit newCommit = new Commit("SQUASHED: " + curr.past.message + "/" + curr.past.past.message, curr.past.past.past);
+                curr.past = newCommit;
+                return true;
+            }
+            curr = curr.past;
+        }
+        return false;
+    }
+
+    // represents a single commit within a Repository
+    public static class Commit {
+        public final String id;
+        public final String message;
+        public Commit past;
+
+        // contructs a new Commit given a message and prior commit
+        // parameters:
+        //      String message: message describing commit changes 
+        //      Commit past: past commit
+        public Commit(String message, Commit past) {
+            this.id = getNewId();
+            this.message = message;
+            this.past = past;
+        }
+
+        // contructs a new Commit given a message
+        // parameters:
+        //      String message: message describing commit changes 
+        public Commit(String message) {
+            this(message, null);
+        }
+
+        // returns a string representation of this Commit with its id & message
+        public String toString() {
+            return id + ": " + message;
+        }
+
+        // generates a new unique ID for this Commit
+        private static String getNewId() {
+            return UUID.randomUUID().toString();
+        }
+    }
+}
